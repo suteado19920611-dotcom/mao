@@ -1102,103 +1102,113 @@ window.RNG_LIST = [
 {code:"WIP110",name:"蓋世の鞭"},
 ];
 
-(function () {
-  if (window.__SAIKAKOU_LOADED__) return;
-  window.__SAIKAKOU_LOADED__ = true;
+(function(){
+  if (window.MAO_REP_UI) return; // 二重定義防止
 
-  // ========= 設定 =========
-  const ITEM1_ID = 'T6A1-W39W4901xhl94dv';
-  const ITEM2_ID = 'T6A1-W39W4858fzymm92';
+  const ITEM1_ID = "T6A1-W39W4901xhl94dv";
+  const ITEM2_ID = "T6A1-W39W4858fzymm92";
 
-  // ========= UI生成 =========
-  function createUI(RNG_LIST) {
-    if (document.getElementById('saikakou-ui')) return;
+  // === UI 本体 ===
+  function openUI(){
+    if (document.getElementById("mao-rep-ui")) return;
 
-    const box = document.createElement('div');
-    box.id = 'saikakou-ui';
-    box.style = `
+    const wrap = document.createElement("div");
+    wrap.id = "mao-rep-ui";
+    wrap.style = `
       position:fixed;top:10%;left:50%;transform:translateX(-50%);
-      background:#111;color:#fff;padding:12px;z-index:99999;
-      border:1px solid #666;width:320px;
+      background:#111;color:#fff;padding:12px;
+      z-index:99999;border:1px solid #555;width:90%;max-width:420px;
     `;
 
-    box.innerHTML = `
-      <div>RNG選択</div>
-      <input id="rng-search" placeholder="検索" style="width:100%">
-      <select id="rng-select" size="8" style="width:100%;margin-top:4px;"></select>
+    wrap.innerHTML = `
+      <div>RNG 選択</div>
+      <input id="rng-search" placeholder="検索…" style="width:100%">
+      <select id="rng-select" size="8" style="width:100%;margin-top:4px"></select>
 
       <div style="margin-top:8px">
-        <label><input type="radio" name="rep" value="rep1"> rep1</label>
-        <label><input type="radio" name="rep" value="rep2" checked> rep2</label>
+        <label><input type="radio" name="mode" value="rep1"> rep1</label>
+        <label style="margin-left:10px">
+          <input type="radio" name="mode" value="rep2" checked> rep2
+        </label>
       </div>
 
-      <button id="exec" style="margin-top:8px;width:100%">実行</button>
+      <button id="exec" style="width:100%;margin-top:8px">実行</button>
+      <button id="close" style="width:100%;margin-top:4px">閉じる</button>
     `;
 
-    document.body.appendChild(box);
+    document.body.appendChild(wrap);
 
-    const sel = box.querySelector('#rng-select');
-    RNG_LIST.forEach(o => {
-      const opt = document.createElement('option');
-      opt.value = o.code;
-      opt.textContent = `${o.code} ${o.name}`;
-      sel.appendChild(opt);
-    });
-
-    box.querySelector('#rng-search').oninput = e => {
-      const v = e.target.value;
-      [...sel.options].forEach(o => {
-        o.style.display = o.textContent.includes(v) ? '' : 'none';
-      });
-    };
-
-    box.querySelector('#exec').onclick = () => {
-      const RNG_CODE = sel.value;
-      const mode = box.querySelector('input[name=rep]:checked').value;
-      if (!RNG_CODE) return alert('RNG未選択');
-
-      exec(RNG_CODE, mode);
-    };
+    document.getElementById("close").onclick = () => wrap.remove();
+    loadRngList();
+    bindExec();
   }
 
-  // ========= 実行ロジック =========
-  function buildRepValue(RNG_CODE, itemId) {
+  // === RNG_LIST 読み込み（1000件以上対応） ===
+  let RNG_DATA = [];
+
+  function loadRngList(){
+    fetch("https://raw.githubusercontent.com/suteado19920611-dotcom/mao/main/rng_list.txt")
+      .then(r=>r.text())
+      .then(t=>{
+        RNG_DATA = t.split("\n").map(l=>{
+          const [code,name] = l.split("\t");
+          return {code,name};
+        }).filter(x=>x.code);
+        renderList(RNG_DATA);
+      });
+  }
+
+  function renderList(list){
+    const sel = document.getElementById("rng-select");
+    sel.innerHTML = "";
+    list.forEach(r=>{
+      const o = document.createElement("option");
+      o.value = r.code;
+      o.textContent = `${r.code} ${r.name}`;
+      sel.appendChild(o);
+    });
+  }
+
+  document.addEventListener("input", e=>{
+    if(e.target.id==="rng-search"){
+      const v=e.target.value;
+      renderList(RNG_DATA.filter(r=>r.code.includes(v)||r.name.includes(v)));
+    }
+  });
+
+  // === 実行ロジック ===
+  function buildRepValue(id, rng){
     return (
-      `sss' union select 'aaaa','${RNG_CODE}',aid,ow_id,num,max_num,plus,` +
-      `s_ug,ug_zan,state,type,fm_price,fm_num,sold_num,k_ug,b_ug,mk_ug,mb_ug,` +
-      `str_ug,def_ug,inte_ug,luk_ug,MHP_ug,MMP_ug,etc_ug,mes,last_update,ck,lc ` +
-      `from mao_user_item where id='${itemId}`
+      `sss' union select 'aaaa','${rng}',aid,ow_id,num,max_num,plus,`+
+      `s_ug,ug_zan,state,type,fm_price,fm_num,sold_num,k_ug,b_ug,mk_ug,mb_ug,`+
+      `str_ug,def_ug,inte_ug,luk_ug,MHP_ug,MMP_ug,etc_ug,mes,last_update,ck,lc `+
+      `from mao_user_item where id='${id}`
     );
   }
 
-  function exec(RNG_CODE, mode) {
-    const f = document.createElement('form');
-    f.method = 'POST';
-    f.action = '/member/main_s/kb2.php?';
+  function bindExec(){
+    document.getElementById("exec").onclick = ()=>{
+      const rng = document.getElementById("rng-select").value;
+      if(!rng){ alert("RNG未選択"); return; }
 
-    const h = (n, v) => {
-      const i = document.createElement('input');
-      i.type = 'hidden';
-      i.name = n;
-      i.value = v;
-      f.appendChild(i);
+      const mode = document.querySelector("input[name=mode]:checked").value;
+
+      const f=document.createElement("form");
+      f.method="POST";
+      f.action="/member/main_s/kb2.php?";
+
+      const h=(n,v)=>{const i=document.createElement("input");i.type="hidden";i.name=n;i.value=v;f.appendChild(i);};
+
+      h("act","rep_item");
+      h("mode",mode);
+      h("rep1",buildRepValue(ITEM1_ID,rng));
+      h("rep2",buildRepValue(ITEM2_ID,rng));
+      h("submit","再加工");
+
+      document.body.appendChild(f);
+      f.requestSubmit();
     };
-
-    h('act', 'rep_item');
-    h('mode', mode);
-    h('rep1', buildRepValue(RNG_CODE, ITEM1_ID));
-    h('rep2', buildRepValue(RNG_CODE, ITEM2_ID));
-    h('submit', '再加工');
-
-    document.body.appendChild(f);
-    f.requestSubmit();
   }
 
-  // ========= RNGリスト取得 =========
-  window.SAIKAKOU_INIT = function () {
-    fetch('https://raw.githubusercontent.com/suteado19920611-dotcom/mao/main/rng_list.json')
-      .then(r => r.json())
-      .then(createUI)
-      .catch(() => alert('RNG_LIST 読み込み失敗'));
-  };
+  window.MAO_REP_UI = { open: openUI };
 })();
