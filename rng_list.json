@@ -1,4 +1,4 @@
-window.RNG_LIST = [
+[
 {code:"AC001",name:"ｽﾗｲﾑｲﾔﾘﾝｸﾞ"},
 {code:"AC002",name:"ｽﾗｲﾑﾈｯｸﾚｽ"},
 {code:"AC003",name:"ｽﾗｲﾑﾍﾟﾝﾀﾞﾝﾄ"},
@@ -1100,4 +1100,4 @@ window.RNG_LIST = [
 {code:"WIP090",name:"神判の鞭"},
 {code:"WIP100",name:"蝕罪の鞭"},
 {code:"WIP110",name:"蓋世の鞭"},
-];
+]
