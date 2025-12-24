@@ -1,4 +1,4 @@
-var RNG_LIST = [
+window.RNG_LIST = [
 {code:"AC001",name:"ｽﾗｲﾑｲﾔﾘﾝｸﾞ"},
 {code:"AC002",name:"ｽﾗｲﾑﾈｯｸﾚｽ"},
 {code:"AC003",name:"ｽﾗｲﾑﾍﾟﾝﾀﾞﾝﾄ"},
