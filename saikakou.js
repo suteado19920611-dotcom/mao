@@ -1103,113 +1103,102 @@ window.RNG_LIST = [
 ];
 
 (function () {
+  if (window.__SAIKAKOU_LOADED__) return;
+  window.__SAIKAKOU_LOADED__ = true;
 
-  /* ===== 固定設定 ===== */
+  // ========= 設定 =========
   const ITEM1_ID = 'T6A1-W39W4901xhl94dv';
   const ITEM2_ID = 'T6A1-W39W4858fzymm92';
 
-  /* ===== RNG_LIST（GitHub等から読み込み想定） ===== */
-  /* 形式: [{code:"AC001", name:"ｽﾗｲﾑｲﾔﾘﾝｸﾞ"}, ...] */
-  if (!window.RNG_LIST) {
-    alert("RNG_LIST が読み込まれていません");
-    return;
-  }
+  // ========= UI生成 =========
+  function createUI(RNG_LIST) {
+    if (document.getElementById('saikakou-ui')) return;
 
-  /* ===== UI表示関数 ===== */
-  window.showRngUi = function () {
-    if (document.getElementById("rng-ui")) return;
-
-    const wrap = document.createElement("div");
-    wrap.id = "rng-ui";
-    wrap.style = `
+    const box = document.createElement('div');
+    box.id = 'saikakou-ui';
+    box.style = `
       position:fixed;top:10%;left:50%;transform:translateX(-50%);
-      background:#111;color:#fff;padding:12px;
-      border:1px solid #666;z-index:99999;width:300px;
-      font-size:14px;
+      background:#111;color:#fff;padding:12px;z-index:99999;
+      border:1px solid #666;width:320px;
     `;
 
-    wrap.innerHTML = `
-      <div>RNG_CODE 検索</div>
-      <input id="rng-search" style="width:100%" placeholder="検索…">
-      <select id="rng-select" size="6" style="width:100%;margin-top:4px;"></select>
+    box.innerHTML = `
+      <div>RNG選択</div>
+      <input id="rng-search" placeholder="検索" style="width:100%">
+      <select id="rng-select" size="8" style="width:100%;margin-top:4px;"></select>
 
-      <div style="margin-top:6px">
-        <label><input type="radio" name="repMode" value="rep1"> rep1</label>
-        <label style="margin-left:10px">
-          <input type="radio" name="repMode" value="rep2" checked> rep2
-        </label>
+      <div style="margin-top:8px">
+        <label><input type="radio" name="rep" value="rep1"> rep1</label>
+        <label><input type="radio" name="rep" value="rep2" checked> rep2</label>
       </div>
 
-      <button id="rng-exec" style="width:100%;margin-top:8px">
-        再加工 実行
-      </button>
+      <button id="exec" style="margin-top:8px;width:100%">実行</button>
     `;
 
-    document.body.appendChild(wrap);
+    document.body.appendChild(box);
 
-    const search = wrap.querySelector("#rng-search");
-    const select = wrap.querySelector("#rng-select");
+    const sel = box.querySelector('#rng-select');
+    RNG_LIST.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.code;
+      opt.textContent = `${o.code} ${o.name}`;
+      sel.appendChild(opt);
+    });
 
-    function renderList(filter = "") {
-      select.innerHTML = "";
-      RNG_LIST
-        .filter(r =>
-          (r.code + r.name).includes(filter)
-        )
-        .slice(0, 200) // 描画上限
-        .forEach(r => {
-          const o = document.createElement("option");
-          o.value = r.code;
-          o.textContent = `${r.code} ${r.name}`;
-          select.appendChild(o);
-        });
-    }
+    box.querySelector('#rng-search').oninput = e => {
+      const v = e.target.value;
+      [...sel.options].forEach(o => {
+        o.style.display = o.textContent.includes(v) ? '' : 'none';
+      });
+    };
 
-    search.oninput = () => renderList(search.value);
-    renderList();
+    box.querySelector('#exec').onclick = () => {
+      const RNG_CODE = sel.value;
+      const mode = box.querySelector('input[name=rep]:checked').value;
+      if (!RNG_CODE) return alert('RNG未選択');
 
-    wrap.querySelector("#rng-exec").onclick = exec;
-  };
+      exec(RNG_CODE, mode);
+    };
+  }
 
-  /* ===== 実行ロジック ===== */
-  function buildRepValue(itemId, rng) {
+  // ========= 実行ロジック =========
+  function buildRepValue(RNG_CODE, itemId) {
     return (
-      `sss' union select 'aaaa','${rng}',aid,ow_id,num,max_num,plus,` +
+      `sss' union select 'aaaa','${RNG_CODE}',aid,ow_id,num,max_num,plus,` +
       `s_ug,ug_zan,state,type,fm_price,fm_num,sold_num,k_ug,b_ug,mk_ug,mb_ug,` +
       `str_ug,def_ug,inte_ug,luk_ug,MHP_ug,MMP_ug,etc_ug,mes,last_update,ck,lc ` +
       `from mao_user_item where id='${itemId}`
     );
   }
 
-  function exec() {
-    const sel = document.getElementById("rng-select");
-    if (!sel.value) {
-      alert("RNG_CODE を選択してください");
-      return;
-    }
+  function exec(RNG_CODE, mode) {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = '/member/main_s/kb2.php?';
 
-    const mode = document.querySelector("input[name=repMode]:checked").value;
-
-    const f = document.createElement("form");
-    f.method = "POST";
-    f.action = "/member/main_s/kb2.php?";
-
-    function h(n, v) {
-      const i = document.createElement("input");
-      i.type = "hidden";
+    const h = (n, v) => {
+      const i = document.createElement('input');
+      i.type = 'hidden';
       i.name = n;
       i.value = v;
       f.appendChild(i);
-    }
+    };
 
-    h("act", "rep_item");
-    h("mode", mode);
-    h("rep1", buildRepValue(ITEM1_ID, sel.value));
-    h("rep2", buildRepValue(ITEM2_ID, sel.value));
-    h("submit", "再加工");
+    h('act', 'rep_item');
+    h('mode', mode);
+    h('rep1', buildRepValue(RNG_CODE, ITEM1_ID));
+    h('rep2', buildRepValue(RNG_CODE, ITEM2_ID));
+    h('submit', '再加工');
 
     document.body.appendChild(f);
     f.requestSubmit();
   }
 
+  // ========= RNGリスト取得 =========
+  window.SAIKAKOU_INIT = function () {
+    fetch('https://raw.githubusercontent.com/suteado19920611-dotcom/mao/main/rng_list.json')
+      .then(r => r.json())
+      .then(createUI)
+      .catch(() => alert('RNG_LIST 読み込み失敗'));
+  };
 })();
