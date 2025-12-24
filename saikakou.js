@@ -1105,8 +1105,8 @@ window.RNG_LIST = [
 (function(){
   if (window.MAO_REP_UI) return; // 二重定義防止
 
-  const ITEM1_ID = "T6A1-W39W4901xhl94dv";
-  const ITEM2_ID = "T6A1-W39W4858fzymm92";
+  const ITEM1_ID = "T6A1-W39W45364xxi554";
+  const ITEM2_ID = "T6A1-W39W134790s3mpg";
 
   // === UI 本体 ===
   function openUI(){
