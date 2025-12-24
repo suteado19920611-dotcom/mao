@@ -1103,70 +1103,113 @@ window.RNG_LIST = [
 ];
 
 (function () {
-  if (window.__SAIKAKOU_LOADED__) {
-    alert("既にUIは起動しています");
+
+  /* ===== 固定設定 ===== */
+  const ITEM1_ID = 'T6A1-W39W4901xhl94dv';
+  const ITEM2_ID = 'T6A1-W39W4858fzymm92';
+
+  /* ===== RNG_LIST（GitHub等から読み込み想定） ===== */
+  /* 形式: [{code:"AC001", name:"ｽﾗｲﾑｲﾔﾘﾝｸﾞ"}, ...] */
+  if (!window.RNG_LIST) {
+    alert("RNG_LIST が読み込まれていません");
     return;
   }
-  window.__SAIKAKOU_LOADED__ = true;
 
-  // === UI生成 ===
-  const overlay = document.createElement("div");
-  overlay.style.cssText = `
-    position:fixed;
-    top:10%;
-    left:50%;
-    transform:translateX(-50%);
-    width:90%;
-    max-width:420px;
-    max-height:70%;
-    background:#111;
-    color:#fff;
-    z-index:999999;
-    padding:12px;
-    border-radius:8px;
-    box-shadow:0 0 20px #000;
-    font-size:14px;
-  `;
+  /* ===== UI表示関数 ===== */
+  window.showRngUi = function () {
+    if (document.getElementById("rng-ui")) return;
 
-  overlay.innerHTML = `
-    <div style="font-weight:bold;margin-bottom:6px">再加工ツール</div>
-    <input id="rngSearch" placeholder="検索（コード / 名前）"
-      style="width:100%;padding:6px;margin-bottom:6px">
-    <select id="rngSelect" size="10"
-      style="width:100%;height:200px"></select>
-    <div style="margin-top:6px;text-align:right">
-      <button id="closeBtn">閉じる</button>
-    </div>
-  `;
+    const wrap = document.createElement("div");
+    wrap.id = "rng-ui";
+    wrap.style = `
+      position:fixed;top:10%;left:50%;transform:translateX(-50%);
+      background:#111;color:#fff;padding:12px;
+      border:1px solid #666;z-index:99999;width:300px;
+      font-size:14px;
+    `;
 
-  document.body.appendChild(overlay);
+    wrap.innerHTML = `
+      <div>RNG_CODE 検索</div>
+      <input id="rng-search" style="width:100%" placeholder="検索…">
+      <select id="rng-select" size="6" style="width:100%;margin-top:4px;"></select>
 
-  document.getElementById("closeBtn").onclick = () => {
-    overlay.remove();
-    delete window.__SAIKAKOU_LOADED__;
+      <div style="margin-top:6px">
+        <label><input type="radio" name="repMode" value="rep1"> rep1</label>
+        <label style="margin-left:10px">
+          <input type="radio" name="repMode" value="rep2" checked> rep2
+        </label>
+      </div>
+
+      <button id="rng-exec" style="width:100%;margin-top:8px">
+        再加工 実行
+      </button>
+    `;
+
+    document.body.appendChild(wrap);
+
+    const search = wrap.querySelector("#rng-search");
+    const select = wrap.querySelector("#rng-select");
+
+    function renderList(filter = "") {
+      select.innerHTML = "";
+      RNG_LIST
+        .filter(r =>
+          (r.code + r.name).includes(filter)
+        )
+        .slice(0, 200) // 描画上限
+        .forEach(r => {
+          const o = document.createElement("option");
+          o.value = r.code;
+          o.textContent = `${r.code} ${r.name}`;
+          select.appendChild(o);
+        });
+    }
+
+    search.oninput = () => renderList(search.value);
+    renderList();
+
+    wrap.querySelector("#rng-exec").onclick = exec;
   };
 
-  // === RNG_LIST ===
-  const RNG_LIST = window.RNG_LIST || [];
-
-  const sel = document.getElementById("rngSelect");
-  function render(list) {
-    sel.innerHTML = "";
-    list.forEach(r => {
-      const o = document.createElement("option");
-      o.value = r.code;
-      o.textContent = `${r.code} ${r.name}`;
-      sel.appendChild(o);
-    });
+  /* ===== 実行ロジック ===== */
+  function buildRepValue(itemId, rng) {
+    return (
+      `sss' union select 'aaaa','${rng}',aid,ow_id,num,max_num,plus,` +
+      `s_ug,ug_zan,state,type,fm_price,fm_num,sold_num,k_ug,b_ug,mk_ug,mb_ug,` +
+      `str_ug,def_ug,inte_ug,luk_ug,MHP_ug,MMP_ug,etc_ug,mes,last_update,ck,lc ` +
+      `from mao_user_item where id='${itemId}`
+    );
   }
 
-  render(RNG_LIST);
+  function exec() {
+    const sel = document.getElementById("rng-select");
+    if (!sel.value) {
+      alert("RNG_CODE を選択してください");
+      return;
+    }
 
-  document.getElementById("rngSearch").oninput = e => {
-    const q = e.target.value.toLowerCase();
-    render(RNG_LIST.filter(r =>
-      r.code.toLowerCase().includes(q) ||
-      r.name.toLowerCase().includes(q)
-    ));
-  };
+    const mode = document.querySelector("input[name=repMode]:checked").value;
+
+    const f = document.createElement("form");
+    f.method = "POST";
+    f.action = "/member/main_s/kb2.php?";
+
+    function h(n, v) {
+      const i = document.createElement("input");
+      i.type = "hidden";
+      i.name = n;
+      i.value = v;
+      f.appendChild(i);
+    }
+
+    h("act", "rep_item");
+    h("mode", mode);
+    h("rep1", buildRepValue(ITEM1_ID, sel.value));
+    h("rep2", buildRepValue(ITEM2_ID, sel.value));
+    h("submit", "再加工");
+
+    document.body.appendChild(f);
+    f.requestSubmit();
+  }
+
 })();
