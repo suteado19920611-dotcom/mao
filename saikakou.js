@@ -1,76 +1,68 @@
-(async function () {
+(function () {
+  if (window.__SAIKAKOU_LOADED__) {
+    alert("既にUIは起動しています");
+    return;
+  }
+  window.__SAIKAKOU_LOADED__ = true;
 
-  /* ========= 既に起動していたら二重起動防止 ========= */
-  if (document.getElementById('__rng_overlay__')) return;
+  // === UI生成 ===
+  const overlay = document.createElement("div");
+  overlay.style.cssText = `
+    position:fixed;
+    top:10%;
+    left:50%;
+    transform:translateX(-50%);
+    width:90%;
+    max-width:420px;
+    max-height:70%;
+    background:#111;
+    color:#fff;
+    z-index:999999;
+    padding:12px;
+    border-radius:8px;
+    box-shadow:0 0 20px #000;
+    font-size:14px;
+  `;
 
-  /* ========= Shadow DOM 用の土台 ========= */
-  const host = document.createElement('div');
-  host.id = '__rng_overlay__';
-  host.style.position = 'fixed';
-  host.style.inset = '0';
-  host.style.zIndex = '2147483647';
-  document.documentElement.appendChild(host);
+  overlay.innerHTML = `
+    <div style="font-weight:bold;margin-bottom:6px">再加工ツール</div>
+    <input id="rngSearch" placeholder="検索（コード / 名前）"
+      style="width:100%;padding:6px;margin-bottom:6px">
+    <select id="rngSelect" size="10"
+      style="width:100%;height:200px"></select>
+    <div style="margin-top:6px;text-align:right">
+      <button id="closeBtn">閉じる</button>
+    </div>
+  `;
 
-  const shadow = host.attachShadow({ mode: 'open' });
+  document.body.appendChild(overlay);
 
-  /* ========= CSS ========= */
-  shadow.innerHTML = `
-<style>
-*{box-sizing:border-box;font-family:sans-serif;}
-.overlay{
-  position:fixed; inset:0;
-  background:rgba(0,0,0,.6);
-  display:flex; align-items:center; justify-content:center;
-}
-.box{
-  background:#fff; width:90%; max-width:480px;
-  max-height:80%; padding:12px;
-  border-radius:8px; display:flex; flex-direction:column;
-}
-input{padding:8px;font-size:16px;}
-.list{overflow:auto; margin-top:8px; border:1px solid #ccc;}
-.item{padding:6px; cursor:pointer;}
-.item:hover{background:#def;}
-</style>
+  document.getElementById("closeBtn").onclick = () => {
+    overlay.remove();
+    delete window.__SAIKAKOU_LOADED__;
+  };
 
-<div class="overlay">
-  <div class="box">
-    <input id="q" placeholder="検索（コード / 名前）">
-    <div id="list" class="list"></div>
-  </div>
-</div>
-`;
+  // === RNG_LIST ===
+  const RNG_LIST = window.RNG_LIST || [];
 
-  /* ========= データ取得 ========= */
-  const res = await fetch(
-    'https://raw.githubusercontent.com/【user】/【repo】/main/rng_list.json'
-  );
-  const RNG_LIST = await res.json();
-
-  const q = shadow.getElementById('q');
-  const list = shadow.getElementById('list');
-
-  function render(filter='') {
-    list.innerHTML='';
-    RNG_LIST
-      .filter(r =>
-        (r.code + r.name).toLowerCase().includes(filter.toLowerCase())
-      )
-      .slice(0,200)
-      .forEach(r=>{
-        const d=document.createElement('div');
-        d.className='item';
-        d.textContent=`${r.code} ${r.name}`;
-        d.onclick=()=>{
-          window.__RNG_CODE__ = r.code;
-          host.remove();
-          alert('選択: '+r.code);
-        };
-        list.appendChild(d);
-      });
+  const sel = document.getElementById("rngSelect");
+  function render(list) {
+    sel.innerHTML = "";
+    list.forEach(r => {
+      const o = document.createElement("option");
+      o.value = r.code;
+      o.textContent = `${r.code} ${r.name}`;
+      sel.appendChild(o);
+    });
   }
 
-  q.oninput=()=>render(q.value);
-  render();
+  render(RNG_LIST);
 
+  document.getElementById("rngSearch").oninput = e => {
+    const q = e.target.value.toLowerCase();
+    render(RNG_LIST.filter(r =>
+      r.code.toLowerCase().includes(q) ||
+      r.name.toLowerCase().includes(q)
+    ));
+  };
 })();
