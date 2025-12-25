@@ -1123,7 +1123,7 @@ window.RNG_LIST = [
     wrap.innerHTML = `
       <div>RNG 選択</div>
       <input id="rng-search" placeholder="検索…" style="width:100%">
-      <select id="rng-select" size="8" style="width:100%;margin-top:4px"></select>
+      <select id="rng-select" size="20" style="width:100%;margin-top:4px"></select>
 
       <div style="margin-top:8px">
         <label><input type="radio" name="mode" value="rep1"> rep1</label>
